@@ -93,21 +93,6 @@ The test plan covers all aspects of the QTrack application including:
 
 ### Testing Approach
 
-#### Test Pyramid Implementation
-\`\`\`
-    /\
-   /  \     E2E Tests (10%)
-  /____\    - Critical user journeys
- /      \   - Cross-browser validation
-/________\  Integration Tests (20%)
-           - API endpoint testing
-           - Database integration
-___________
-           Unit Tests (70%)
-           - Business logic validation
-           - Component testing
-\`\`\`
-
 #### Test Types and Coverage
 
 ##### Unit Testing
@@ -471,17 +456,3 @@ ___________
 
 ---
 
-**Document Control**
-- **Version**: 1.0
-- **Last Updated**: January 2025
-- **Next Review**: March 2025
-- **Approved By**: QA Manager, Engineering Lead, Product Manager
-
-**Distribution List**
-- QA Engineering Team
-- Development Team
-- Product Management
-- Engineering Leadership
-- Business Stakeholders
-
-For questions or clarifications regarding this test plan, please contact the QA Engineering Team at qa-team@qtrack.com.
