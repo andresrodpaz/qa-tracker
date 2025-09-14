@@ -1,0 +1,74 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 15
+      name: "Sustained load"
+  processor: "./load-test-processor.js"
+
+scenarios:
+  - name: "User Journey - Dashboard"
+    weight: 40
+    flow:
+      - get:
+          url: "/"
+          capture:
+            - json: "$.user.id"
+              as: "userId"
+      - think: 2
+      - get:
+          url: "/api/tickets"
+      - think: 3
+      - get:
+          url: "/api/analytics"
+
+  - name: "User Journey - Ticket Management"
+    weight: 30
+    flow:
+      - get:
+          url: "/tickets"
+      - think: 2
+      - post:
+          url: "/api/tickets"
+          json:
+            title: "Load Test Ticket {{ $randomString() }}"
+            description: "Created during load testing"
+            priority: "medium"
+            category: "bug"
+            reportedBy: "load-test-user"
+      - think: 1
+      - get:
+          url: "/api/tickets"
+
+  - name: "User Journey - Test Case Execution"
+    weight: 20
+    flow:
+      - get:
+          url: "/test-cases"
+      - think: 2
+      - get:
+          url: "/api/test-cases"
+      - think: 1
+      - put:
+          url: "/api/test-cases/{{ $randomString() }}"
+          json:
+            status: "passed"
+            actualResult: "Load test execution"
+
+  - name: "User Journey - Analytics"
+    weight: 10
+    flow:
+      - get:
+          url: "/analytics"
+      - think: 3
+      - get:
+          url: "/api/analytics?period=7d"
+      - think: 2
+      - get:
+          url: "/api/analytics?period=30d"

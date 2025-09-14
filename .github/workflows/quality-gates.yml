@@ -1,0 +1,134 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Quality Gate Checks
+  quality-gate:
+    name: Quality Gate Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Check test coverage threshold
+        run: |
+          COVERAGE=$(npm run test:coverage:check | grep -o '[0-9]*\.[0-9]*' | head -1)
+          echo "Current coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "❌ Coverage $COVERAGE% is below 70% threshold"
+            exit 1
+          else
+            echo "✅ Coverage $COVERAGE% meets 70% threshold"
+          fi
+
+      - name: Check code complexity
+        run: |
+          npx complexity-report --format json src/ > complexity.json
+          COMPLEXITY=$(jq '.summary.complexity.cyclomatic' complexity.json)
+          echo "Average complexity: $COMPLEXITY"
+          if (( $(echo "$COMPLEXITY > 10" | bc -l) )); then
+            echo "❌ Code complexity $COMPLEXITY is above 10 threshold"
+            exit 1
+          else
+            echo "✅ Code complexity $COMPLEXITY is within acceptable range"
+          fi
+
+      - name: Check bundle size
+        run: |
+          npm run build
+          BUNDLE_SIZE=$(du -sh .next/static/chunks/pages/_app-*.js | cut -f1)
+          echo "Bundle size: $BUNDLE_SIZE"
+          # Add bundle size checks here
+
+      - name: Validate commit messages
+        run: |
+          npx commitlint --from HEAD~1 --to HEAD --verbose
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          TODO_COUNT=$(grep -r "TODO\|FIXME" src/ --exclude-dir=node_modules | wc -l)
+          echo "TODO/FIXME count: $TODO_COUNT"
+          if [ $TODO_COUNT -gt 5 ]; then
+            echo "❌ Too many TODO/FIXME comments ($TODO_COUNT > 5)"
+            exit 1
+          fi
+
+  # API Contract Testing
+  contract-testing:
+    name: API Contract Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate OpenAPI spec
+        run: npm run generate:api-spec
+
+      - name: Validate API contracts
+        run: |
+          npx swagger-codegen-cli validate -i api-spec.json
+          echo "✅ API contracts are valid"
+
+      - name: Check for breaking changes
+        run: |
+          if [ -f "previous-api-spec.json" ]; then
+            npx oasdiff breaking previous-api-spec.json api-spec.json
+          else
+            echo "No previous API spec found, skipping breaking change check"
+          fi
+
+  # Database Migration Testing
+  migration-testing:
+    name: Database Migration Testing
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.changed_files, 'scripts/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test database migrations
+        run: |
+          echo "Testing database migration scripts..."
+          # Add migration testing logic here
+          npm run test:migrations
+
+      - name: Validate schema changes
+        run: |
+          echo "Validating database schema changes..."
+          # Add schema validation logic here
+          npm run validate:schema

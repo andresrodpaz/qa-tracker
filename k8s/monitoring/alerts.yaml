@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qtrack-alerts
+  namespace: qtrack-monitoring
+data:
+  qtrack_rules.yml: |
+    groups:
+    - name: qtrack.rules
+      rules:
+      - alert: QTrackHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "QTrack is experiencing {{ $value }} errors per second"
+
+      - alert: QTrackHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s"
+
+      - alert: QTrackDatabaseConnectionFailure
+        expr: up{job="qtrack-database"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection failure"
+          description: "QTrack cannot connect to the database"
+
+      - alert: QTrackHighMemoryUsage
+        expr: container_memory_usage_bytes{pod=~"qtrack-.*"} / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory"
