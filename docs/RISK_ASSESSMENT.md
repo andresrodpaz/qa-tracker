@@ -383,8 +383,4 @@ QTrack accepts moderate risk levels for:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: January 2025  
-**Next Review**: April 2025  
-**Risk Owner**: Engineering Leadership Team  
-**Approved By**: CTO, Head of QA
+
